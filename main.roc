@@ -1,5 +1,5 @@
 app "sudoku"
-    packages { pf: "https://github.com/roc-lang/basic-cli/releases/download/0.5.0/Cufzl36_SnJ4QbOoEmiJ5dIpUxBvdB3NEySvuH82Wio.tar.br" }
+    packages { pf: "https://github.com/roc-lang/basic-cli/releases/download/0.7.0/bkGby8jb0tmZYsy2hg1E_B2QrCgcSTxdUlHtETwm5m4.tar.br" }
     imports [
         pf.Stdout,
         pf.Stderr,
@@ -7,7 +7,7 @@ app "sudoku"
         pf.Arg,
         pf.Path.{ Path },
         pf.File.{ File },
-        Sudoku.BasicSolver,
+        Sudoku.Solve,
     ]
     provides [main] to pf
 
@@ -45,12 +45,12 @@ loadFile = \pathStr ->
 
 parseAndSummarize : Str -> { solvableMsg : Str, legalMsg : Str, puzzle : Str }
 parseAndSummarize = \contents ->
-    puzzle = Sudoku.BasicSolver.puzzleFromStr contents
+    puzzle = Sudoku.Solve.puzzleFromStr contents
     {
         solvableMsg: Str.joinWith
             [
                 "This puzzle is ",
-                if Sudoku.BasicSolver.isSolvable puzzle then
+                if Sudoku.Solve.isSolvable puzzle then
                     ""
                 else
                     "not ",
@@ -60,13 +60,13 @@ parseAndSummarize = \contents ->
         legalMsg: Str.joinWith
             [
                 "This puzzle ",
-                if Sudoku.BasicSolver.isLegal puzzle then
+                if Sudoku.Solve.isLegal puzzle then
                     "follows"
                 else
                     "does not follow",
                 " the rules of Sudoku!",
             ]
             "",
-        puzzle: Sudoku.BasicSolver.prettyPrint puzzle,
+        puzzle: Sudoku.Solve.prettyPrint puzzle,
     }
 

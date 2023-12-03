@@ -75,17 +75,7 @@ increment = \@Number n ->
         Err MaxValue
 
 fullSet : Set Number
-fullSet = Set.fromList [
-    @Number 1,
-    @Number 2,
-    @Number 3,
-    @Number 4,
-    @Number 5,
-    @Number 6,
-    @Number 7,
-    @Number 8,
-    @Number 9,
-]
+fullSet = Set.fromList all
 
 one = @Number 1
 two = @Number 2

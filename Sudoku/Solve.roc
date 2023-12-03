@@ -1,4 +1,4 @@
-interface Sudoku.BasicSolver
+interface Sudoku.Solve
     exposes [
         Cell,
         Puzzle,
@@ -9,33 +9,36 @@ interface Sudoku.BasicSolver
     ]
     imports [
         Sudoku.Number.{ Number },
-        Sudoku.Grid.{ Grid },
+        Sudoku.GenericGrid.{ Grid },
         Sudoku.Coord.{ Coord },
     ]
 
 Cell : [
-    Empty,
+    Empty (Set Number),
     Fixed Number,
 ]
+
+defaultCell : Cell
+defaultCell = Empty Sudoku.Number.fullSet
 
 Puzzle : Grid Cell
 
 isSolvable : Puzzle -> Bool
 isSolvable = \puzzle ->
-    Sudoku.Grid.isSolvable
+    Sudoku.GenericGrid.isSolvable
         puzzle
         (\cell ->
             when cell is
-                Empty -> Empty
+                Empty _ -> Empty
                 Fixed _ -> Given)
 
 isLegal : Puzzle -> Bool
 isLegal = \puzzle ->
-    Sudoku.Grid.isLegal
+    Sudoku.GenericGrid.isLegal
         puzzle
         (\cell ->
             when cell is
-                Empty -> Empty
+                Empty _ -> Empty
                 Fixed num -> Fixed num
         )
 
@@ -51,20 +54,22 @@ puzzleFromStr = \str ->
                     (\numStr ->
                         when Sudoku.Number.fromStr numStr is
                             Ok num -> Fixed num
-                            Err _ -> Empty
+                            Err _ -> Empty Sudoku.Number.fullSet
                     ))
         |> List.join
 
-    Sudoku.Grid.fromListNormalize cellList Empty
+    Sudoku.GenericGrid.fromListNormalize cellList defaultCell
 
+prettyPrint : Puzzle -> Str
 prettyPrint = \puzzle ->
-    Sudoku.Grid.prettyPrint
+    Sudoku.GenericGrid.prettyPrint
         puzzle
         (\cell ->
             when cell is
-                Empty -> " "
+                Empty _ -> " "
                 Fixed num -> Sudoku.Number.toStr num)
 
+testPuzzle1 : Puzzle
 testPuzzle1 =
     """
     0,9,0,4,0,0,0,0,0
@@ -78,12 +83,14 @@ testPuzzle1 =
     0,0,0,0,0,0,0,5,0
     """
     |> puzzleFromStr
+
 expect testPuzzle1 |> isSolvable == Bool.true
 expect testPuzzle1 |> isLegal == Bool.true
 
+testPuzzle2 : Puzzle
 testPuzzle2 =
     """
-    ,,,,,,,,
+    ,1,1,,,,,,
     ,,,,,,,,
     ,,,,,,,,
     ,,,,,,,,
@@ -93,30 +100,8 @@ testPuzzle2 =
     ,,,,,,,,
     ,,,,,,,,
     """
-expect testPuzzle2 |> puzzleFromStr |> isSolvable == Bool.false
-expect testPuzzle2 |> puzzleFromStr |> isLegal == Bool.true
+    |> puzzleFromStr
 
-## Solve a sudoku puzzle using a naive backtracking algorithm
-solve : Puzzle -> Result Puzzle _
-solve = \puzzle ->
-    if !(isSolvable puzzle) then
-        Err Unsolvable
-    else
-        when Sudoku.Grid.findFirstCoord puzzle (\cell -> cell == Empty) is
-            Ok coord ->
-                when tryNumber puzzle coord Sudoku.Number.one is
-                    Ok newPuzzle ->
-                        solve newPuzzle
+expect testPuzzle2 |> isSolvable == Bool.false
+expect testPuzzle2 |> isLegal == Bool.false
 
-                    Err _ ->
-                        crash "todo"
-
-            Err _ ->
-                Ok puzzle
-
-tryNumber : Puzzle, Coord, Number -> Result Puzzle [Illegal]
-tryNumber = \puzzle, coord, num ->
-    if !(isLegal puzzle) then
-        Err Illegal
-    else
-        Ok puzzle
