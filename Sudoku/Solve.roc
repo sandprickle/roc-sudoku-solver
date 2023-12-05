@@ -1,6 +1,5 @@
 interface Sudoku.Solve
     exposes [
-        Cell,
         Puzzle,
         puzzleFromStr,
         prettyPrint,
@@ -9,38 +8,19 @@ interface Sudoku.Solve
     ]
     imports [
         Sudoku.Number.{ Number },
-        Sudoku.GenericGrid.{ Grid },
+        Sudoku.Grid.{ Grid, Cell },
         Sudoku.Coord.{ Coord },
     ]
 
-Cell : [
-    Empty (Set Number),
-    Fixed Number,
-]
-
-defaultCell : Cell
-defaultCell = Empty Sudoku.Number.fullSet
-
-Puzzle : Grid Cell
+Puzzle : Grid
 
 isSolvable : Puzzle -> Bool
-isSolvable = \puzzle ->
-    Sudoku.GenericGrid.isSolvable
-        puzzle
-        (\cell ->
-            when cell is
-                Empty _ -> Empty
-                Fixed _ -> Given)
+isSolvable =
+    Sudoku.Grid.isSolvable
 
 isLegal : Puzzle -> Bool
-isLegal = \puzzle ->
-    Sudoku.GenericGrid.isLegal
-        puzzle
-        (\cell ->
-            when cell is
-                Empty _ -> Empty
-                Fixed num -> Fixed num
-        )
+isLegal =
+    Sudoku.Grid.isLegal
 
 puzzleFromStr : Str -> Puzzle
 puzzleFromStr = \str ->
@@ -58,16 +38,12 @@ puzzleFromStr = \str ->
                     ))
         |> List.join
 
-    Sudoku.GenericGrid.fromListNormalize cellList defaultCell
+    Sudoku.Grid.fromListNormalize cellList
 
 prettyPrint : Puzzle -> Str
 prettyPrint = \puzzle ->
-    Sudoku.GenericGrid.prettyPrint
+    Sudoku.Grid.prettyPrint
         puzzle
-        (\cell ->
-            when cell is
-                Empty _ -> " "
-                Fixed num -> Sudoku.Number.toStr num)
 
 testPuzzle1 : Puzzle
 testPuzzle1 =

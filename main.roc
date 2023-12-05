@@ -43,7 +43,12 @@ loadFile = \pathStr ->
             {} <- Stderr.line "Error reading file" |> Task.await
             Task.err 1
 
-parseAndSummarize : Str -> { solvableMsg : Str, legalMsg : Str, puzzle : Str }
+parseAndSummarize : Str
+    -> {
+        solvableMsg : Str,
+        legalMsg : Str,
+        puzzle : Str,
+    }
 parseAndSummarize = \contents ->
     puzzle = Sudoku.Solve.puzzleFromStr contents
     {

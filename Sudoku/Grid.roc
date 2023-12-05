@@ -177,6 +177,24 @@ numberIsLegal = \grid, coord, num ->
 
             housesOk [row, col, box]
 
+# prune : Grid -> Grid
+# prune = \grid ->
+#     crash "todo"
+
+# pruneHouse : List Cell -> List Cell
+# pruneHouse = \house ->
+#     fixedNumbers =
+#         house
+#         |> List.keepOks
+#             (\cell ->
+#                 when cell is
+#                     Fixed num -> Ok num
+#                     Empty _ -> Err {})
+#     fixedNumbers
+#         |> List.walk house (\house, number ->
+#             )
+#     crash "wip"
+
 # Display
 
 prettyPrint : Grid -> Str
