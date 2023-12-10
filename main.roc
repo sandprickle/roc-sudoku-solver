@@ -7,7 +7,7 @@ app "sudoku"
         pf.Arg,
         pf.Path.{ Path },
         pf.File.{ File },
-        Sudoku.Solve,
+        Sudoku.Grid.{ Grid, Cell },
     ]
     provides [main] to pf
 
@@ -50,12 +50,13 @@ parseAndSummarize : Str
         puzzle : Str,
     }
 parseAndSummarize = \contents ->
-    puzzle = Sudoku.Solve.puzzleFromStr contents
+    puzzle = Sudoku.Grid.fromStr contents 
+
     {
         solvableMsg: Str.joinWith
             [
                 "This puzzle is ",
-                if Sudoku.Solve.isSolvable puzzle then
+                if Sudoku.Grid.solvable puzzle == Solvable then
                     ""
                 else
                     "not ",
@@ -65,13 +66,30 @@ parseAndSummarize = \contents ->
         legalMsg: Str.joinWith
             [
                 "This puzzle ",
-                if Sudoku.Solve.isLegal puzzle then
+                if Sudoku.Grid.legal puzzle == Legal then
                     "follows"
                 else
                     "does not follow",
                 " the rules of Sudoku!",
             ]
             "",
-        puzzle: Sudoku.Solve.prettyPrint puzzle,
+        puzzle: Sudoku.Grid.prettyPrint puzzle,
     }
 
+# attemptSolve : Grid -> Result Grid [NoSolution, IllegalPuzzle]
+# attemptSolve = \grid ->
+
+#     when (Sudoku.Grid.legal grid, Sudoku.Grid.solvable grid) is
+#         (Legal, Solvable) ->
+#             Ok (solve grid)
+
+#         (Illegal, _) ->
+#             Err IllegalPuzzle
+
+#         _ ->
+#             Err NoSolution
+
+# solve : Grid -> Grid
+# solve = \grid ->
+#     pruned = Sudoku.Grid.prune grid
+#     crash "todo"
