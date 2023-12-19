@@ -1,4 +1,4 @@
-interface Sudoku.Solve
+interface Solve
     exposes [
         Puzzle,
         puzzleFromStr,
@@ -7,20 +7,20 @@ interface Sudoku.Solve
         isSolvable,
     ]
     imports [
-        Sudoku.Number.{ Number },
-        Sudoku.Grid.{ Grid, Cell },
-        Sudoku.Coord.{ Coord },
+        Number.{ Number },
+        Grid.{ Grid, Cell },
+        Coord.{ Coord },
     ]
 
 Puzzle : Grid
 
 isSolvable : Puzzle -> Bool
 isSolvable =
-    Sudoku.Grid.isSolvable
+    Grid.isSolvable
 
 isLegal : Puzzle -> Bool
 isLegal =
-    Sudoku.Grid.isLegal
+    Grid.isLegal
 
 puzzleFromStr : Str -> Puzzle
 puzzleFromStr = \str ->
@@ -32,17 +32,17 @@ puzzleFromStr = \str ->
             (\row -> List.map
                     row
                     (\numStr ->
-                        when Sudoku.Number.fromStr numStr is
+                        when Number.fromStr numStr is
                             Ok num -> Fixed num
-                            Err _ -> Empty Sudoku.Number.fullSet
+                            Err _ -> Empty Number.fullSet
                     ))
         |> List.join
 
-    Sudoku.Grid.fromListNormalize cellList
+    Grid.fromListNormalize cellList
 
 prettyPrint : Puzzle -> Str
 prettyPrint = \puzzle ->
-    Sudoku.Grid.prettyPrint
+    Grid.prettyPrint
         puzzle
 
 testPuzzle1 : Puzzle

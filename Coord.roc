@@ -1,4 +1,4 @@
-interface Sudoku.Coord
+interface Coord
     exposes [
         Coord,
         getRow,

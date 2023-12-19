@@ -1,4 +1,4 @@
-interface Sudoku.Grid
+interface Grid
     exposes [
         Grid,
         Cell,
@@ -8,22 +8,24 @@ interface Sudoku.Grid
         get,
         set,
         map,
+        findFirst,
         getRow,
         getCol,
         getBox,
         toRows,
         toCols,
         toBoxes,
-        solvable,
+        sufficientHints,
         legal,
         numberIsLegal,
         prune,
         prettyPrint,
+        possibilities,
     ]
 
     imports [
-        Sudoku.Number.{ Number },
-        Sudoku.Coord.{ Coord },
+        Number.{ Number },
+        Coord.{ Coord },
     ]
 
 Grid := List Cell implements [Eq]
@@ -34,7 +36,7 @@ Cell : [
 ]
 
 defaultCell : Cell
-defaultCell = Empty Sudoku.Number.all
+defaultCell = Empty Number.all
 
 init : Grid
 init = List.repeat defaultCell 81 |> @Grid
@@ -65,7 +67,7 @@ fromStr = \str ->
             (\row -> List.map
                     row
                     (\numStr ->
-                        when Sudoku.Number.fromStr numStr is
+                        when Number.fromStr numStr is
                             Ok num -> Fixed num
                             Err _ -> defaultCell
                     ))
@@ -76,13 +78,13 @@ fromStr = \str ->
 get : Grid, Coord -> Cell
 get = \@Grid cells, coord ->
     cells
-    |> List.get (Sudoku.Coord.toNat coord)
+    |> List.get (Coord.toNat coord)
     |> Result.withDefault defaultCell
 
 set : Grid, Coord, Cell -> Grid
 set = \@Grid cells, coord, value ->
     cells
-    |> List.set (Sudoku.Coord.toNat coord) value
+    |> List.set (Coord.toNat coord) value
     |> @Grid
 
 map : Grid, (Cell -> Cell) -> Grid
@@ -90,6 +92,15 @@ map = \@Grid cells, fn ->
     cells
     |> List.map fn
     |> @Grid
+
+possibilities : Grid -> List (List Number)
+possibilities = \@Grid cells ->
+    List.keepOks
+        cells
+        (\cell ->
+            when cell is
+                Fixed _ -> Err NotEmpty
+                Empty nums -> Ok nums)
 
 mapRows : Grid, (List Cell -> List Cell) -> Grid
 mapRows = \grid, fn ->
@@ -128,7 +139,9 @@ mapBoxes = \inputGrid, fn ->
 
         )
 
-houseRange = { start: At 0, end: At 8 }
+findFirst : Grid, (Cell -> Bool) -> Result Cell [NotFound]
+findFirst = \@Grid cells, fn ->
+    List.findFirst cells fn
 
 getRow : Grid, U8 -> List Cell
 getRow = \grid, rowNum ->
@@ -179,9 +192,9 @@ toBoxes = \grid ->
 
 # Sudoku Logic
 
-## Determine whether a Grid is solvable, i.e. whether it has at least 17 clues.
-solvable : Grid -> [Solvable, NotSolvable]
-solvable = \@Grid cells ->
+## Determine whether a Grid has at least 17 clues
+sufficientHints : Grid -> [SufficientHints, TooFewHints]
+sufficientHints = \@Grid cells ->
     filledCells = List.countIf
         cells
         (\cell ->
@@ -190,9 +203,9 @@ solvable = \@Grid cells ->
                 Fixed _ -> Bool.true)
 
     if filledCells >= 17 then
-        Solvable
+        SufficientHints
     else
-        NotSolvable
+        TooFewHints
 
 ## Determine whether a house (row, column, or box) is legal
 ## i.e. whether it contains no duplicate numbers
@@ -238,9 +251,9 @@ numberIsLegal = \grid, coord, num ->
         Fixed _ -> Bool.false
         Empty _ ->
             newGrid = set grid coord (Fixed num)
-            row = getRow newGrid (Sudoku.Coord.getRow coord)
-            col = getCol newGrid (Sudoku.Coord.getCol coord)
-            box = getBox newGrid (Sudoku.Coord.getBox coord)
+            row = getRow newGrid (Coord.getRow coord)
+            col = getCol newGrid (Coord.getCol coord)
+            box = getBox newGrid (Coord.getBox coord)
 
             housesOk [row, col, box]
 
@@ -254,14 +267,12 @@ prune = \grid ->
 
     if newGrid == grid then
         # dbg
-        #     when get grid (Sudoku.Coord.fromXY 0 0) is
+        #     when get grid (Coord.fromXY 0 0) is
         #         Empty nums ->
         #             nums
-        #             |> List.map Sudoku.Number.toStr
+        #             |> List.map Number.toStr
         #             |> Str.joinWith " "
-
         #         _ -> ""
-
         grid
     else
         prune newGrid
@@ -285,7 +296,7 @@ pruneHouse = \house ->
                     Fixed
                         (
                             List.get numbers 0
-                            |> Result.withDefault Sudoku.Number.one
+                            |> Result.withDefault Number.one
                         )
                 else
                     Empty
@@ -304,19 +315,46 @@ pruneHouse = \house ->
 expect
     pruneHouse [
         Empty [
-            Sudoku.Number.one,
-            Sudoku.Number.two,
-            Sudoku.Number.three,
-            Sudoku.Number.four,
+            Number.one,
+            Number.two,
+            Number.three,
+            Number.four,
         ],
-        Fixed Sudoku.Number.three,
-        Empty [Sudoku.Number.four],
+        Fixed Number.three,
+        Empty [Number.four],
     ]
     == [
-        Empty [Sudoku.Number.one, Sudoku.Number.two],
-        Fixed Sudoku.Number.three,
-        Fixed Sudoku.Number.four,
+        Empty [Number.one, Number.two],
+        Fixed Number.three,
+        Fixed Number.four,
     ]
+
+solve : Grid -> Result Grid [TooFewHints, Illegal, NoSolution, MultipleSolutions]
+solve = \inputGrid ->
+    if legal inputGrid == Illegal then
+        Err Illegal
+    else if sufficientHints inputGrid == TooFewHints then
+        Err TooFewHints
+    else
+        when solveHelper inputGrid is
+            Ok grid -> Ok grid
+            NoSolution -> Err NoSolution
+            MultipleSolutions -> Err MultipleSolutions
+
+solveHelper : Grid -> [Ok Grid, NoSolution, MultipleSolutions]
+solveHelper = \@Grid inputCells ->
+    thingy =
+        inputCells
+        |> List.walkWithIndexUntil
+            (Ok (@Grid inputCells))
+            (\state, cell, index ->
+                when cell is
+                    Fixed _ -> Continue state
+                    Empty possible ->
+                        crash "todo"
+
+            )
+    crash "wip"
 
 # Display
 
@@ -336,7 +374,7 @@ prettyPrint = \grid ->
         |> List.map
             (\cell ->
                 when cell is
-                    Fixed num -> Sudoku.Number.toStr num
+                    Fixed num -> Number.toStr num
                     Empty _ -> " ")
         |> List.walk
             templates.row
@@ -368,10 +406,12 @@ prettyPrint = \grid ->
         )
 # Helpers
 
+houseRange = { start: At 0, end: At 8 }
+
 rowCoords : U8 -> List Coord
 rowCoords = \rowNum ->
     getCoord = \colNum ->
-        Sudoku.Coord.fromRowCol rowNum colNum
+        Coord.fromRowCol rowNum colNum
 
     List.map
         (List.range houseRange)
@@ -380,7 +420,7 @@ rowCoords = \rowNum ->
 colCoords : U8 -> List Coord
 colCoords = \colNum ->
     getCoord = \rowNum ->
-        Sudoku.Coord.fromRowCol rowNum colNum
+        Coord.fromRowCol rowNum colNum
 
     List.map
         (List.range houseRange)
@@ -409,7 +449,7 @@ boxCoords = \boxNum ->
     coordsInRow = \yCoord ->
         List.map
             xCoords
-            (\xCoord -> Sudoku.Coord.fromXY xCoord yCoord)
+            (\xCoord -> Coord.fromXY xCoord yCoord)
 
     List.map yCoords coordsInRow |> List.join
 
@@ -451,7 +491,7 @@ testPuzzle1 =
     """
     |> fromStr
 
-expect testPuzzle1 |> solvable == Solvable
+expect testPuzzle1 |> sufficientHints == Solvable
 expect testPuzzle1 |> legal == Legal
 expect testPuzzle1 == testPuzzle1
 expect
@@ -459,15 +499,15 @@ expect
     |> getCol 0
     ==
     [
-        Empty Sudoku.Number.all,
-        Fixed Sudoku.Number.two,
-        Fixed Sudoku.Number.three,
-        Fixed Sudoku.Number.five,
-        Empty Sudoku.Number.all,
-        Fixed Sudoku.Number.four,
-        Empty Sudoku.Number.all,
-        Empty Sudoku.Number.all,
-        Empty Sudoku.Number.all,
+        Empty Number.all,
+        Fixed Number.two,
+        Fixed Number.three,
+        Fixed Number.five,
+        Empty Number.all,
+        Fixed Number.four,
+        Empty Number.all,
+        Empty Number.all,
+        Empty Number.all,
 
     ]
 expect
@@ -475,15 +515,15 @@ expect
     |> toBoxes
     |> List.get 0
     == Ok [
-        Empty Sudoku.Number.all,
-        Fixed Sudoku.Number.nine,
-        Empty Sudoku.Number.all,
-        Fixed Sudoku.Number.two,
-        Empty Sudoku.Number.all,
-        Fixed Sudoku.Number.one,
-        Fixed Sudoku.Number.three,
-        Empty Sudoku.Number.all,
-        Fixed Sudoku.Number.five,
+        Empty Number.all,
+        Fixed Number.nine,
+        Empty Number.all,
+        Fixed Number.two,
+        Empty Number.all,
+        Fixed Number.one,
+        Fixed Number.three,
+        Empty Number.all,
+        Fixed Number.five,
     ]
 
 testPuzzle2 : Grid
@@ -501,5 +541,5 @@ testPuzzle2 =
     """
     |> fromStr
 
-expect testPuzzle2 |> solvable == NotSolvable
+expect testPuzzle2 |> sufficientHints == NotSolvable
 expect testPuzzle2 |> legal == Illegal

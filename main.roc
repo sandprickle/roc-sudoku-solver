@@ -7,7 +7,7 @@ app "sudoku"
         pf.Arg,
         pf.Path.{ Path },
         pf.File.{ File },
-        Sudoku.Grid.{ Grid, Cell },
+        Grid.{ Grid, Cell },
     ]
     provides [main] to pf
 
@@ -20,10 +20,9 @@ main =
         when List.get args 1 is
             Ok file ->
                 contents <- loadFile file |> Task.await
-                { solvableMsg, legalMsg, puzzle } = parseAndSummarize contents
-                {} <- Stdout.line solvableMsg |> Task.await
-                {} <- Stdout.line legalMsg |> Task.await
-                Stdout.line puzzle
+                Grid.fromStr contents
+                |> Grid.prettyPrint
+                |> Stdout.line
 
             Err _ ->
                 Task.err 1
@@ -43,53 +42,20 @@ loadFile = \pathStr ->
             {} <- Stderr.line "Error reading file" |> Task.await
             Task.err 1
 
-parseAndSummarize : Str
-    -> {
-        solvableMsg : Str,
-        legalMsg : Str,
-        puzzle : Str,
-    }
-parseAndSummarize = \contents ->
-    puzzle = Sudoku.Grid.fromStr contents 
+# attemptSolve : Grid -> Result Grid _
+# attemptSolve = \inputGrid ->
+#     if Grid.legal inputGrid == Illegal then
+#         Err IllegalPuzzle
+#     else if Grid.sufficientHints inputGrid == TooFewHints then
+#         Err TooFewHints
+#     else
+#         solve inputGrid
 
-    {
-        solvableMsg: Str.joinWith
-            [
-                "This puzzle is ",
-                if Sudoku.Grid.solvable puzzle == Solvable then
-                    ""
-                else
-                    "not ",
-                "solvable!",
-            ]
-            "",
-        legalMsg: Str.joinWith
-            [
-                "This puzzle ",
-                if Sudoku.Grid.legal puzzle == Legal then
-                    "follows"
-                else
-                    "does not follow",
-                " the rules of Sudoku!",
-            ]
-            "",
-        puzzle: Sudoku.Grid.prettyPrint puzzle,
-    }
-
-# attemptSolve : Grid -> Result Grid [NoSolution, IllegalPuzzle]
-# attemptSolve = \grid ->
-
-#     when (Sudoku.Grid.legal grid, Sudoku.Grid.solvable grid) is
-#         (Legal, Solvable) ->
-#             Ok (solve grid)
-
-#         (Illegal, _) ->
-#             Err IllegalPuzzle
-
-#         _ ->
-#             Err NoSolution
-
-# solve : Grid -> Grid
+# solve : Grid -> Result Grid [NoSolution]
 # solve = \grid ->
-#     pruned = Sudoku.Grid.prune grid
-#     crash "todo"
+#     pruned = Grid.prune grid
+#     possibilities = Grid.possibilities pruned
+#     result = List.walkUntil
+
+# crash "wip"
+

@@ -1,4 +1,4 @@
-interface Sudoku.Number
+interface Number
     exposes [
         Number,
         fromInt,

@@ -1,4 +1,4 @@
-interface Sudoku.GenericGrid
+interface GenericGrid
     exposes [
         Grid,
         init,
@@ -19,8 +19,8 @@ interface Sudoku.GenericGrid
     ]
 
     imports [
-        Sudoku.Number.{ Number },
-        Sudoku.Coord.{ Coord },
+        Number.{ Number },
+        Coord.{ Coord },
     ]
 
 ## A 9 x 9 Sudoku Grid
@@ -40,7 +40,7 @@ findFirstCoord : Grid a, (a -> Bool) -> Result Coord [NotFound]
 findFirstCoord = \@Grid { cells }, fn ->
     when List.findFirstIndex cells fn is
         Ok index ->
-            Ok (Sudoku.Coord.fromInt index)
+            Ok (Coord.fromInt index)
 
         Err _ ->
             Err NotFound
@@ -96,7 +96,7 @@ toList = \@Grid grid ->
 get : Grid a, Coord -> a
 get = \@Grid { default, cells }, coord ->
     cells
-    |> List.get (Sudoku.Coord.toNat coord)
+    |> List.get (Coord.toNat coord)
     |> Result.withDefault default
 
 set : Grid a, Coord, a -> Grid a
@@ -104,7 +104,7 @@ set = \@Grid { default, cells }, coord, value ->
     @Grid {
         default,
         cells: cells
-        |> List.set (Sudoku.Coord.toNat coord) value,
+        |> List.set (Coord.toNat coord) value,
     }
 
 houseRange = { start: At 0, end: At 8 }
@@ -112,7 +112,7 @@ houseRange = { start: At 0, end: At 8 }
 rowCoords : U8 -> List Coord
 rowCoords = \rowNum ->
     getCoord = \colNum ->
-        Sudoku.Coord.fromRowCol rowNum colNum
+        Coord.fromRowCol rowNum colNum
 
     List.map
         (List.range houseRange)
@@ -121,7 +121,7 @@ rowCoords = \rowNum ->
 colCoords : U8 -> List Coord
 colCoords = \colNum ->
     getCoord = \rowNum ->
-        Sudoku.Coord.fromRowCol rowNum colNum
+        Coord.fromRowCol rowNum colNum
 
     List.map
         (List.range houseRange)
@@ -150,7 +150,7 @@ boxCoords = \boxNum ->
     coordsInRow = \yCoord ->
         List.map
             xCoords
-            (\xCoord -> Sudoku.Coord.fromXY xCoord yCoord)
+            (\xCoord -> Coord.fromXY xCoord yCoord)
 
     List.map yCoords coordsInRow |> List.join
 
@@ -298,9 +298,9 @@ numberLegal = \inputGrid, coord, num, toBasicCell ->
         Fixed _ -> Bool.false
         Empty ->
             newGrid = set grid coord (Fixed num)
-            row = getRow newGrid (Sudoku.Coord.getRow coord)
-            col = getCol newGrid (Sudoku.Coord.getCol coord)
-            box = getBox newGrid (Sudoku.Coord.getBox coord)
+            row = getRow newGrid (Coord.getRow coord)
+            col = getCol newGrid (Coord.getCol coord)
+            box = getBox newGrid (Coord.getBox coord)
 
             housesOk [row, col, box]
 
