@@ -1,5 +1,5 @@
 app "sudoku"
-    packages { pf: "https://github.com/roc-lang/basic-cli/releases/download/0.7.0/bkGby8jb0tmZYsy2hg1E_B2QrCgcSTxdUlHtETwm5m4.tar.br" }
+    packages { pf: "https://github.com/roc-lang/basic-cli/releases/download/0.8.1/x8URkvfyi9I0QhmVG98roKBUs_AZRkLFwFJVJ3942YA.tar.br" }
     imports [
         pf.Stdout,
         pf.Stderr,
@@ -58,4 +58,3 @@ loadFile = \pathStr ->
 #     result = List.walkUntil
 
 # crash "wip"
-

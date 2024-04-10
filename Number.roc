@@ -5,7 +5,7 @@ interface Number
         fromIntNormalize,
         fromStr,
         toI8,
-        toNat,
+        toU64,
         toStr,
         increment,
         fullSet,
@@ -61,8 +61,8 @@ fromStr = \str ->
 toI8 : Number -> I8
 toI8 = \@Number n -> n
 
-toNat : Number -> Nat
-toNat = \@Number n -> Num.toNat n
+toU64 : Number -> U64
+toU64 = \@Number n -> Num.toU64 n
 
 toStr : Number -> Str
 toStr = \@Number n -> Num.toStr n

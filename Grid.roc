@@ -78,13 +78,13 @@ fromStr = \str ->
 get : Grid, Coord -> Cell
 get = \@Grid cells, coord ->
     cells
-    |> List.get (Coord.toNat coord)
+    |> List.get (Coord.toU64 coord)
     |> Result.withDefault defaultCell
 
 set : Grid, Coord, Cell -> Grid
 set = \@Grid cells, coord, value ->
     cells
-    |> List.set (Coord.toNat coord) value
+    |> List.set (Coord.toU64 coord) value
     |> @Grid
 
 map : Grid, (Cell -> Cell) -> Grid
@@ -179,7 +179,7 @@ fromCols = \cols ->
         (List.range houseRange)
         (\n -> List.map
                 cols
-                (\col -> List.get col (Num.toNat n)
+                (\col -> List.get col (Num.toU64 n)
                     |> Result.withDefault defaultCell))
     |> List.join
     |> @Grid
@@ -328,33 +328,6 @@ expect
         Fixed Number.three,
         Fixed Number.four,
     ]
-
-solve : Grid -> Result Grid [TooFewHints, Illegal, NoSolution, MultipleSolutions]
-solve = \inputGrid ->
-    if legal inputGrid == Illegal then
-        Err Illegal
-    else if sufficientHints inputGrid == TooFewHints then
-        Err TooFewHints
-    else
-        when solveHelper inputGrid is
-            Ok grid -> Ok grid
-            NoSolution -> Err NoSolution
-            MultipleSolutions -> Err MultipleSolutions
-
-solveHelper : Grid -> [Ok Grid, NoSolution, MultipleSolutions]
-solveHelper = \@Grid inputCells ->
-    thingy =
-        inputCells
-        |> List.walkWithIndexUntil
-            (Ok (@Grid inputCells))
-            (\state, cell, index ->
-                when cell is
-                    Fixed _ -> Continue state
-                    Empty possible ->
-                        crash "todo"
-
-            )
-    crash "wip"
 
 # Display
 

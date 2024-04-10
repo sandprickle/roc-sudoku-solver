@@ -8,7 +8,7 @@ interface Coord
         toRowCol,
         fromXY,
         toXY,
-        toNat,
+        toU64,
         fromInt,
         increment,
     ]
@@ -75,9 +75,9 @@ toXY = \index ->
     { row, col } = toRowCol index
     { x: col, y: row }
 
-toNat : Coord -> Nat
-toNat = \@Coord index ->
-    Num.toNat index
+toU64 : Coord -> U64
+toU64 = \@Coord index ->
+    Num.toU64 index
 
 fromInt : Int * -> Coord
 fromInt = \int ->
