@@ -8,14 +8,17 @@ interface Coord
         toRowCol,
         fromXY,
         toXY,
+        toU8,
         toU64,
         fromInt,
         increment,
+        first,
+        last,
     ]
     imports []
 
 ## The coordinate of a cell in a Sudoku grid
-Coord := U8
+Coord := U8 implements [Eq]
 
 ## The row that contains this Coord
 getRow : Coord -> U8
@@ -75,6 +78,10 @@ toXY = \index ->
     { row, col } = toRowCol index
     { x: col, y: row }
 
+toU8 : Coord -> U8
+toU8 = \@Coord index ->
+    index
+
 toU64 : Coord -> U64
 toU64 = \@Coord index ->
     Num.toU64 index
@@ -90,9 +97,15 @@ fromInt = \int ->
             n
     Num.toU8 (normalize int) |> @Coord
 
-increment : Coord -> Coord
+increment : Coord -> Result Coord [OutOfBounds]
 increment = \@Coord coord ->
     if coord < 80 then
-        coord + 1 |> @Coord
+        coord + 1 |> @Coord |> Ok
     else
-        @Coord coord
+        Err OutOfBounds
+
+first : Coord
+first = @Coord 0
+
+last : Coord
+last = @Coord 80

@@ -9,6 +9,7 @@ interface Grid
         set,
         map,
         findFirst,
+        findFirstCoord,
         getRow,
         getCol,
         getBox,
@@ -16,7 +17,7 @@ interface Grid
         toCols,
         toBoxes,
         sufficientHints,
-        legal,
+        isLegal,
         numberIsLegal,
         prune,
         prettyPrint,
@@ -143,6 +144,10 @@ findFirst : Grid, (Cell -> Bool) -> Result Cell [NotFound]
 findFirst = \@Grid cells, fn ->
     List.findFirst cells fn
 
+findFirstCoord : Grid, (Cell -> Bool) -> Result Coord [NotFound]
+findFirstCoord = \@Grid cells, fn ->
+    List.findFirstIndex cells fn |> Result.map Coord.fromInt
+
 getRow : Grid, U8 -> List Cell
 getRow = \grid, rowNum ->
     List.map
@@ -193,19 +198,18 @@ toBoxes = \grid ->
 # Sudoku Logic
 
 ## Determine whether a Grid has at least 17 clues
-sufficientHints : Grid -> [SufficientHints, TooFewHints]
+sufficientHints : Grid -> Bool
 sufficientHints = \@Grid cells ->
     filledCells = List.countIf
         cells
         (\cell ->
             when cell is
                 Empty _ -> Bool.false
-                Fixed _ -> Bool.true)
+                Fixed _ -> Bool.true
 
-    if filledCells >= 17 then
-        SufficientHints
-    else
-        TooFewHints
+        )
+
+    filledCells >= 17
 
 ## Determine whether a house (row, column, or box) is legal
 ## i.e. whether it contains no duplicate numbers
@@ -228,8 +232,8 @@ housesOk = \houses ->
     |> List.all identity
 
 ## Determine whether a Grid is legal
-legal : Grid -> [Legal, Illegal]
-legal = \grid ->
+isLegal : Grid -> Bool
+isLegal = \grid ->
     rowsOk =
         toRows grid
         |> housesOk
@@ -242,7 +246,7 @@ legal = \grid ->
         toBoxes grid
         |> housesOk
 
-    if rowsOk && colsOk && boxesOk then Legal else Illegal
+    rowsOk && colsOk && boxesOk
 
 numberIsLegal : Grid, Coord, Number -> Bool
 numberIsLegal = \grid, coord, num ->
@@ -266,13 +270,6 @@ prune = \grid ->
         |> mapBoxes pruneHouse
 
     if newGrid == grid then
-        # dbg
-        #     when get grid (Coord.fromXY 0 0) is
-        #         Empty nums ->
-        #             nums
-        #             |> List.map Number.toStr
-        #             |> Str.joinWith " "
-        #         _ -> ""
         grid
     else
         prune newGrid
@@ -377,6 +374,7 @@ prettyPrint = \grid ->
             Str.concat output toAdd
 
         )
+
 # Helpers
 
 houseRange = { start: At 0, end: At 8 }
@@ -464,8 +462,8 @@ testPuzzle1 =
     """
     |> fromStr
 
-expect testPuzzle1 |> sufficientHints == Solvable
-expect testPuzzle1 |> legal == Legal
+expect testPuzzle1 |> sufficientHints == Bool.true
+expect testPuzzle1 |> isLegal == Bool.true
 expect testPuzzle1 == testPuzzle1
 expect
     testPuzzle1
@@ -514,5 +512,5 @@ testPuzzle2 =
     """
     |> fromStr
 
-expect testPuzzle2 |> sufficientHints == NotSolvable
-expect testPuzzle2 |> legal == Illegal
+expect testPuzzle2 |> sufficientHints == Bool.false
+expect testPuzzle2 |> isLegal == Bool.false

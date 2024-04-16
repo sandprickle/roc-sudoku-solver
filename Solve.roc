@@ -1,83 +1,77 @@
 interface Solve
     exposes [
-        Puzzle,
-        puzzleFromStr,
-        prettyPrint,
-        isLegal,
-        isSolvable,
+        backtrackSimple,
     ]
     imports [
-        Number.{ Number },
         Grid.{ Grid, Cell },
         Coord.{ Coord },
     ]
 
-Puzzle : Grid
+backtrackSimple : Grid -> Result Grid [NoSolutionFound, NotLegal, TooFewHints]
+backtrackSimple = \puzzle ->
+    sufficientHints = Grid.sufficientHints puzzle
+    puzzleLegal = Grid.isLegal puzzle
 
-isSolvable : Puzzle -> Bool
-isSolvable =
-    Grid.isSolvable
+    if sufficientHints then
+        if puzzleLegal then
+            start =
+                Grid.findFirstCoord
+                    puzzle
+                    (\cell ->
+                        when cell is
+                            Fixed _ -> Bool.false
+                            Empty _ -> Bool.true
+                    )
+                |> Result.withDefault Coord.first
 
-isLegal : Puzzle -> Bool
-isLegal =
-    Grid.isLegal
+            backtrackSimpleHelp puzzle start
+        else
+            Err NotLegal
+    else
+        Err TooFewHints
 
-puzzleFromStr : Str -> Puzzle
-puzzleFromStr = \str ->
-    cellList =
-        str
-        |> Str.split "\n"
-        |> List.map (\row -> Str.split row ",")
-        |> List.map
-            (\row -> List.map
-                    row
-                    (\numStr ->
-                        when Number.fromStr numStr is
-                            Ok num -> Fixed num
-                            Err _ -> Empty Number.fullSet
-                    ))
-        |> List.join
+backtrackSimpleHelp : Grid, Coord -> Result Grid [NoSolutionFound]
+backtrackSimpleHelp = \puzzle, currentCoord ->
 
-    Grid.fromListNormalize cellList
+    currentCell = Grid.get puzzle currentCoord
 
-prettyPrint : Puzzle -> Str
-prettyPrint = \puzzle ->
-    Grid.prettyPrint
-        puzzle
+    when currentCell is
+        Fixed _ ->
+            when Coord.increment currentCoord is
+                Ok newCoord -> backtrackSimpleHelp puzzle newCoord
+                Err _ -> Ok puzzle
 
-testPuzzle1 : Puzzle
-testPuzzle1 =
-    """
-    0,9,0,4,0,0,0,0,0
-    2,0,1,3,0,0,0,0,0
-    3,0,5,0,9,0,8,0,0
-    5,0,3,0,4,0,0,0,8
-    0,8,0,7,0,6,0,3,0
-    4,0,0,0,3,0,0,0,7
-    0,0,0,0,2,0,4,0,6
-    0,0,0,0,0,9,3,0,0
-    0,0,0,0,0,0,0,5,0
-    """
-    |> puzzleFromStr
+        Empty possibleNums ->
+            testNumsResult = List.walkUntil
+                possibleNums
+                (NoSolution puzzle currentCoord)
+                (\state, num ->
+                    when state is
+                        NoSolution grid coord ->
+                            if Grid.numberIsLegal grid coord num then
+                                newGrid = Grid.set grid coord (Fixed num)
 
-expect testPuzzle1 |> isSolvable == Bool.true
-expect testPuzzle1 |> isLegal == Bool.true
+                                when Coord.increment coord is
+                                    Ok newCoord ->
+                                        when backtrackSimpleHelp newGrid newCoord is
+                                            Ok solution ->
+                                                Solution solution |> Break
 
-testPuzzle2 : Puzzle
-testPuzzle2 =
-    """
-    ,1,1,,,,,,
-    ,,,,,,,,
-    ,,,,,,,,
-    ,,,,,,,,
-    ,,,,,,,,
-    ,,,,,,,,
-    ,,,,,,,,
-    ,,,,,,,,
-    ,,,,,,,,
-    """
-    |> puzzleFromStr
+                                            Err _ ->
+                                                NoSolution grid currentCoord
+                                                |> Continue
 
-expect testPuzzle2 |> isSolvable == Bool.false
-expect testPuzzle2 |> isLegal == Bool.false
+                                    Err _ -> Solution newGrid |> Break
+                            else
+                                NoSolution grid currentCoord |> Continue
+
+                        Solution grid ->
+                            Solution grid |> Break)
+
+            when testNumsResult is
+                NoSolution _ _ ->
+                    Err NoSolutionFound
+
+                Solution grid ->
+                    Ok grid
 
