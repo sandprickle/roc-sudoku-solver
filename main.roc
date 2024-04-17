@@ -9,6 +9,7 @@ app "sudoku"
         pf.File.{ File },
         Grid.{ Grid, Cell },
         Solve,
+        Puzzles,
     ]
     provides [main] to pf
 
@@ -19,29 +20,32 @@ main =
         Stdout.line "Usage: sudoku <file>"
     else
         when List.get args 1 is
-            Ok file ->
-                contents <- loadFile file |> Task.await
-                inPuzzle = Grid.fromStr contents
+            Ok arg ->
+                if arg == "benchmark" then
+                    runBenchmark
+                else
+                    contents <- loadFile arg |> Task.await
+                    inPuzzle = Grid.fromStr contents
 
-                _ <- inPuzzle
-                    |> Grid.prettyPrint
-                    |> Stdout.line
-                    |> Task.await
+                    _ <- inPuzzle
+                        |> Grid.prettyPrint
+                        |> Stdout.line
+                        |> Task.await
 
-                output =
-                    when Solve.backtrackSimple inPuzzle is
-                        Ok solution ->
-                            "Solution:\n$(Grid.prettyPrint solution)"
+                    output =
+                        when inPuzzle |> Grid.prune |> Solve.backtrackSimple is
+                            Ok solution ->
+                                "Solution:\n$(Grid.prettyPrint solution)"
 
-                        Err TooFewHints ->
-                            "Too few hints!"
+                            Err TooFewHints ->
+                                "Too few hints!"
 
-                        Err NotLegal ->
-                            "Puzzle is not legal!"
+                            Err NotLegal ->
+                                "Puzzle is not legal!"
 
-                        Err NoSolutionFound ->
-                            "No Solution!"
-                Stdout.line output
+                            Err NoSolutionFound ->
+                                "No Solution!"
+                    Stdout.line output
 
             Err _ ->
                 Task.err 1
@@ -60,3 +64,14 @@ loadFile = \pathStr ->
         Err _ ->
             {} <- Stderr.line "Error reading file" |> Task.await
             Task.err 1
+
+runBenchmark : Task {} I32
+runBenchmark =
+    puzzles =
+        List.repeat Puzzles.puzzle1 100
+        |> List.map Grid.fromStr
+        |> List.map Grid.prune
+
+    results = List.map puzzles Solve.backtrackSimple
+
+    Task.ok {}

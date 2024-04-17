@@ -50,10 +50,13 @@ backtrackSimpleHelp = \puzzle, currentCoord ->
                         NoSolution grid coord ->
                             if Grid.numberIsLegal grid coord num then
                                 newGrid = Grid.set grid coord (Fixed num)
-
                                 when Coord.increment coord is
                                     Ok newCoord ->
-                                        when backtrackSimpleHelp newGrid newCoord is
+                                        when
+                                            backtrackSimpleHelp
+                                                (Grid.prune newGrid)
+                                                newCoord
+                                        is
                                             Ok solution ->
                                                 Solution solution |> Break
 

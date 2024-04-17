@@ -42,7 +42,7 @@ defaultCell = Empty Number.all
 init : Grid
 init = List.repeat defaultCell 81 |> @Grid
 
-# Create a Grid from a List of values.
+## Create a Grid from a List of values.
 ## Pad or truncate the list if it is not the correct length.
 fromList : List Cell -> Grid
 fromList = \inputList ->
@@ -60,21 +60,19 @@ fromList = \inputList ->
 
 fromStr : Str -> Grid
 fromStr = \str ->
-    list =
-        str
-        |> Str.split "\n"
-        |> List.map (\row -> Str.split row ",")
-        |> List.map
-            (\row -> List.map
-                    row
-                    (\numStr ->
-                        when Number.fromStr numStr is
-                            Ok num -> Fixed num
-                            Err _ -> defaultCell
-                    ))
-        |> List.join
-
-    fromList list
+    str
+    |> Str.split "\n"
+    |> List.map (\row -> Str.split row ",")
+    |> List.map
+        (\row -> List.map
+                row
+                (\numStr ->
+                    when Number.fromStr numStr is
+                        Ok num -> Fixed num
+                        Err _ -> defaultCell
+                ))
+    |> List.join
+    |> fromList
 
 get : Grid, Coord -> Cell
 get = \@Grid cells, coord ->
