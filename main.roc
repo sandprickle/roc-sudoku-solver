@@ -1,77 +1,36 @@
-app "sudoku"
-    packages { pf: "https://github.com/roc-lang/basic-cli/releases/download/0.8.1/x8URkvfyi9I0QhmVG98roKBUs_AZRkLFwFJVJ3942YA.tar.br" }
-    imports [
-        pf.Stdout,
-        pf.Stderr,
-        pf.Task.{ Task },
-        pf.Arg,
-        pf.Path.{ Path },
-        pf.File.{ File },
-        Grid.{ Grid, Cell },
-        Solve,
-        Puzzles,
-    ]
-    provides [main] to pf
+app [main!] { pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.19.0/Hj-J_zxz7V9YurCSTFcFdu6cQJie4guzsPMUi5kBYUk.tar.br" }
+import pf.Stdout
+import pf.Stderr
+import pf.Arg exposing [Arg]
+# import pf.Path
+# import pf.File
+import Grid exposing [Grid, Cell]
+import Solve
+import Puzzles
 
-main : Task {} I32
-main =
-    args <- Arg.list |> Task.await
-    if List.len args <= 1 then
-        Stdout.line "Usage: sudoku <file>"
-    else
-        when List.get args 1 is
-            Ok arg ->
-                if arg == "benchmark" then
-                    runBenchmark
-                else
-                    contents <- loadFile arg |> Task.await
-                    inPuzzle = Grid.fromStr contents
-
-                    _ <- inPuzzle
-                        |> Grid.prettyPrint
-                        |> Stdout.line
-                        |> Task.await
-
-                    output =
-                        when inPuzzle |> Grid.prune |> Solve.backtrackSimple is
-                            Ok solution ->
-                                "Solution:\n$(Grid.prettyPrint solution)"
-
-                            Err TooFewHints ->
-                                "Too few hints!"
-
-                            Err NotLegal ->
-                                "Puzzle is not legal!"
-
-                            Err NoSolutionFound ->
-                                "No Solution!"
-                    Stdout.line output
-
-            Err _ ->
-                Task.err 1
-
-loadFile : Str -> Task Str I32
-loadFile = \pathStr ->
-    path = Path.fromStr pathStr
-
-    result <- File.readUtf8 path |> Task.attempt
-
-    when result is
-        Ok content ->
-            content
-            |> Task.ok
-
+main! : List Arg => Result {} _
+main! = |raw_args|
+    args = List.map raw_args Arg.display
+    when List.get args 1 is
         Err _ ->
-            {} <- Stderr.line "Error reading file" |> Task.await
-            Task.err 1
+            Stdout.line! "Invalid usage"
 
-runBenchmark : Task {} I32
-runBenchmark =
+        Ok "benchmark" ->
+            runBenchmark! {}
+
+        Ok filename ->
+            Stderr.line! "TODO"
+
+runBenchmark! : {} => Result {} _
+runBenchmark! = |{}|
+    _ = Stdout.line! "Running benchmarks..."
+
     puzzles =
         List.repeat Puzzles.puzzle1 100
-        |> List.map Grid.fromStr
+        |> List.map Grid.from_str
         |> List.map Grid.prune
 
-    results = List.map puzzles Solve.backtrackSimple
+    results = List.map puzzles Solve.backtrack_simple
 
-    Task.ok {}
+    _ = Stdout.line! "Finished solving 100 puzzles"
+    Ok {}

@@ -1,80 +1,80 @@
-interface Solve
-    exposes [
-        backtrackSimple,
-    ]
-    imports [
-        Grid.{ Grid, Cell },
-        Coord.{ Coord },
-    ]
+module [
+    backtrack_simple,
+]
 
-backtrackSimple : Grid -> Result Grid [NoSolutionFound, NotLegal, TooFewHints]
-backtrackSimple = \puzzle ->
-    sufficientHints = Grid.sufficientHints puzzle
-    puzzleLegal = Grid.isLegal puzzle
+import Grid exposing [Grid, Cell]
+import Coord exposing [Coord]
 
-    if sufficientHints then
-        if puzzleLegal then
+backtrack_simple : Grid -> Result Grid [NoSolutionFound, NotLegal, TooFewHints]
+backtrack_simple = |puzzle|
+    sufficient_hints = Grid.sufficient_hints(puzzle)
+    puzzle_legal = Grid.is_legal(puzzle)
+
+    if sufficient_hints then
+        if puzzle_legal then
             start =
-                Grid.findFirstCoord
-                    puzzle
-                    (\cell ->
+                Grid.find_first_coord(
+                    puzzle,
+                    |cell|
                         when cell is
-                            Fixed _ -> Bool.false
-                            Empty _ -> Bool.true
-                    )
-                |> Result.withDefault Coord.first
+                            Fixed(_) -> Bool.false
+                            Empty(_) -> Bool.true,
+                )
+                |> Result.with_default(Coord.first)
 
-            backtrackSimpleHelp puzzle start
+            backtrack_simple_help(puzzle, start)
         else
-            Err NotLegal
+            Err(NotLegal)
     else
-        Err TooFewHints
+        Err(TooFewHints)
 
-backtrackSimpleHelp : Grid, Coord -> Result Grid [NoSolutionFound]
-backtrackSimpleHelp = \puzzle, currentCoord ->
+backtrack_simple_help : Grid, Coord -> Result Grid [NoSolutionFound]
+backtrack_simple_help = |puzzle, current_coord|
 
-    currentCell = Grid.get puzzle currentCoord
+    current_cell = Grid.get(puzzle, current_coord)
 
-    when currentCell is
-        Fixed _ ->
-            when Coord.increment currentCoord is
-                Ok newCoord -> backtrackSimpleHelp puzzle newCoord
-                Err _ -> Ok puzzle
+    when current_cell is
+        Fixed(_) ->
+            when Coord.increment(current_coord) is
+                Ok(new_coord) -> backtrack_simple_help(puzzle, new_coord)
+                Err(_) -> Ok(puzzle)
 
-        Empty possibleNums ->
-            testNumsResult = List.walkUntil
-                possibleNums
-                (NoSolution puzzle currentCoord)
-                (\state, num ->
+        Empty(possible_nums) ->
+            test_nums_result = List.walk_until(
+                possible_nums,
+                NoSolution(puzzle, current_coord),
+                |state, num|
                     when state is
-                        NoSolution grid coord ->
-                            if Grid.numberIsLegal grid coord num then
-                                newGrid = Grid.set grid coord (Fixed num)
-                                when Coord.increment coord is
-                                    Ok newCoord ->
+                        NoSolution(grid, coord) ->
+                            if Grid.number_is_legal(grid, coord, num) then
+                                new_grid = Grid.set(grid, coord, Fixed(num))
+                                when Coord.increment(coord) is
+                                    Ok(new_coord) ->
                                         when
-                                            backtrackSimpleHelp
-                                                (Grid.prune newGrid)
-                                                newCoord
+                                            backtrack_simple_help(
+                                                Grid.prune(new_grid),
+                                                new_coord,
+                                            )
                                         is
-                                            Ok solution ->
-                                                Solution solution |> Break
+                                            Ok(solution) ->
+                                                Solution(solution) |> Break
 
-                                            Err _ ->
-                                                NoSolution grid currentCoord
+                                            Err(_) ->
+                                                NoSolution(grid, current_coord)
                                                 |> Continue
 
-                                    Err _ -> Solution newGrid |> Break
+                                    Err(_) -> Solution(new_grid) |> Break
                             else
-                                NoSolution grid currentCoord |> Continue
+                                NoSolution(grid, current_coord) |> Continue
 
-                        Solution grid ->
-                            Solution grid |> Break)
+                        Solution(grid) ->
+                            Solution(grid) |> Break,
+            )
 
-            when testNumsResult is
-                NoSolution _ _ ->
-                    Err NoSolutionFound
+            when test_nums_result is
+                NoSolution(_, _) ->
+                    Err(NoSolutionFound)
 
-                Solution grid ->
-                    Ok grid
+                Solution(grid) ->
+                    Ok(grid)
 

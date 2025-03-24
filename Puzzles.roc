@@ -1,6 +1,4 @@
-interface Puzzles
-    exposes [puzzle1, benchmarkPuzzles]
-    imports []
+module [puzzle1, benchmark_puzzles]
 
 puzzle1 =
     """
@@ -15,7 +13,7 @@ puzzle1 =
     0,0,0,0,9,0,0,0,0
     """
 
-benchmarkPuzzles = [
+benchmark_puzzles = [
     """
     0,0,0,0,0,2,1,0,4
     0,0,8,0,0,1,0,0,3

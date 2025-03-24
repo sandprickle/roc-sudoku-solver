@@ -1,33 +1,30 @@
-interface Grid
-    exposes [
-        Grid,
-        Cell,
-        init,
-        fromList,
-        fromStr,
-        get,
-        set,
-        map,
-        findFirst,
-        findFirstCoord,
-        getRow,
-        getCol,
-        getBox,
-        toRows,
-        toCols,
-        toBoxes,
-        sufficientHints,
-        isLegal,
-        numberIsLegal,
-        prune,
-        prettyPrint,
-        possibilities,
-    ]
+module [
+    Grid,
+    Cell,
+    init,
+    from_list,
+    from_str,
+    get,
+    set,
+    map,
+    find_first,
+    find_first_coord,
+    get_row,
+    get_col,
+    get_box,
+    to_rows,
+    to_cols,
+    to_boxes,
+    sufficient_hints,
+    is_legal,
+    number_is_legal,
+    prune,
+    pretty_print,
+    possibilities,
+]
 
-    imports [
-        Number.{ Number },
-        Coord.{ Coord },
-    ]
+import Number exposing [Number]
+import Coord exposing [Coord]
 
 Grid := List Cell implements [Eq]
 
@@ -36,417 +33,443 @@ Cell : [
     Fixed Number,
 ]
 
-defaultCell : Cell
-defaultCell = Empty Number.all
+default_cell : Cell
+default_cell = Empty(Number.all)
 
 init : Grid
-init = List.repeat defaultCell 81 |> @Grid
+init = List.repeat(default_cell, 81) |> @Grid
 
 ## Create a Grid from a List of values.
 ## Pad or truncate the list if it is not the correct length.
-fromList : List Cell -> Grid
-fromList = \inputList ->
+from_list : List Cell -> Grid
+from_list = |input_list|
     list =
-        if List.len inputList > 81 then
-            List.takeFirst inputList 81
-        else if List.len inputList < 81 then
-            List.concat
-                inputList
-                (List.repeat defaultCell (81 - List.len inputList))
+        if List.len(input_list) > 81 then
+            List.take_first(input_list, 81)
+        else if List.len(input_list) < 81 then
+            List.concat(
+                input_list,
+                List.repeat(default_cell, (81 - List.len(input_list))),
+            )
         else
-            inputList
+            input_list
 
-    @Grid list
+    @Grid(list)
 
-fromStr : Str -> Grid
-fromStr = \str ->
+from_str : Str -> Grid
+from_str = |str|
     str
-    |> Str.split "\n"
-    |> List.map (\row -> Str.split row ",")
-    |> List.map
-        (\row -> List.map
-                row
-                (\numStr ->
-                    when Number.fromStr numStr is
-                        Ok num -> Fixed num
-                        Err _ -> defaultCell
-                ))
+    |> Str.split_on("\n")
+    |> List.map(|row| Str.split_on(row, ","))
+    |> List.map(
+        |row|
+            List.map(
+                row,
+                |num_str|
+                    when Number.from_str(num_str) is
+                        Ok(num) -> Fixed(num)
+                        Err(_) -> default_cell,
+            ),
+    )
     |> List.join
-    |> fromList
+    |> from_list
 
 get : Grid, Coord -> Cell
-get = \@Grid cells, coord ->
+get = |@Grid(cells), coord|
     cells
-    |> List.get (Coord.toU64 coord)
-    |> Result.withDefault defaultCell
+    |> List.get(Coord.to_u64(coord))
+    |> Result.with_default(default_cell)
 
 set : Grid, Coord, Cell -> Grid
-set = \@Grid cells, coord, value ->
+set = |@Grid(cells), coord, value|
     cells
-    |> List.set (Coord.toU64 coord) value
+    |> List.set(Coord.to_u64(coord), value)
     |> @Grid
 
 map : Grid, (Cell -> Cell) -> Grid
-map = \@Grid cells, fn ->
+map = |@Grid(cells), fn|
     cells
-    |> List.map fn
+    |> List.map(fn)
     |> @Grid
 
 possibilities : Grid -> List (List Number)
-possibilities = \@Grid cells ->
-    List.keepOks
-        cells
-        (\cell ->
+possibilities = |@Grid(cells)|
+    List.keep_oks(
+        cells,
+        |cell|
             when cell is
-                Fixed _ -> Err NotEmpty
-                Empty nums -> Ok nums)
+                Fixed(_) -> Err(NotEmpty)
+                Empty(nums) -> Ok(nums),
+    )
 
-mapRows : Grid, (List Cell -> List Cell) -> Grid
-mapRows = \grid, fn ->
+map_rows : Grid, (List Cell -> List Cell) -> Grid
+map_rows = |grid, fn|
     grid
-    |> toRows
-    |> List.map fn
+    |> to_rows
+    |> List.map(fn)
     |> List.join
     |> @Grid
 
-mapCols : Grid, (List Cell -> List Cell) -> Grid
-mapCols = \grid, fn ->
+map_cols : Grid, (List Cell -> List Cell) -> Grid
+map_cols = |grid, fn|
     grid
-    |> toCols
-    |> List.map fn
-    |> fromCols
+    |> to_cols
+    |> List.map(fn)
+    |> from_cols
 
-mapBoxes : Grid, (List Cell -> List Cell) -> Grid
-mapBoxes = \inputGrid, fn ->
-    List.walk
-        (List.range houseRange)
-        inputGrid
-        (\grid, n ->
-            newBox = getBox grid n |> fn
-            coords = boxCoords n
+map_boxes : Grid, (List Cell -> List Cell) -> Grid
+map_boxes = |input_grid, fn|
+    List.walk(
+        List.range(house_range),
+        input_grid,
+        |grid, n|
+            new_box = get_box(grid, n) |> fn
+            coords = box_coords(n)
 
-            List.walkWithIndex
-                coords
-                grid
-                (\grid2, coord, index ->
-                    newCell =
-                        List.get newBox index
-                        |> Result.withDefault defaultCell
+            List.walk_with_index(
+                coords,
+                grid,
+                |grid2, coord, index|
+                    new_cell =
+                        List.get(new_box, index)
+                        |> Result.with_default(default_cell)
 
-                    set grid2 coord newCell
-                )
+                    set(grid2, coord, new_cell),
+            ),
+    )
 
-        )
+find_first : Grid, (Cell -> Bool) -> Result Cell [NotFound]
+find_first = |@Grid(cells), fn|
+    List.find_first(cells, fn)
 
-findFirst : Grid, (Cell -> Bool) -> Result Cell [NotFound]
-findFirst = \@Grid cells, fn ->
-    List.findFirst cells fn
+find_first_coord : Grid, (Cell -> Bool) -> Result Coord [NotFound]
+find_first_coord = |@Grid(cells), fn|
+    List.find_first_index(cells, fn) |> Result.map_ok(Coord.from_int)
 
-findFirstCoord : Grid, (Cell -> Bool) -> Result Coord [NotFound]
-findFirstCoord = \@Grid cells, fn ->
-    List.findFirstIndex cells fn |> Result.map Coord.fromInt
+get_row : Grid, U8 -> List Cell
+get_row = |grid, row_num|
+    List.map(
+        row_coords(row_num),
+        |coord| get(grid, coord),
+    )
 
-getRow : Grid, U8 -> List Cell
-getRow = \grid, rowNum ->
-    List.map
-        (rowCoords rowNum)
-        (\coord -> get grid coord)
+get_col : Grid, U8 -> List Cell
+get_col = |grid, col_num|
+    List.map(
+        col_coords(col_num),
+        |coord| get(grid, coord),
+    )
 
-getCol : Grid, U8 -> List Cell
-getCol = \grid, colNum ->
-    List.map
-        (colCoords colNum)
-        (\coord -> get grid coord)
+get_box : Grid, U8 -> List Cell
+get_box = |grid, box_num|
+    List.map(
+        box_coords(box_num),
+        |coord| get(grid, coord),
+    )
 
-getBox : Grid, U8 -> List Cell
-getBox = \grid, boxNum ->
-    List.map
-        (boxCoords boxNum)
-        (\coord -> get grid coord)
+to_rows : Grid -> List (List Cell)
+to_rows = |grid|
+    List.map(
+        List.range(house_range),
+        |n| get_row(grid, n),
+    )
 
-toRows : Grid -> List (List Cell)
-toRows = \grid ->
-    List.map
-        (List.range houseRange)
-        (\n -> getRow grid n)
+to_cols : Grid -> List (List Cell)
+to_cols = |grid|
+    List.map(
+        List.range(house_range),
+        |n| get_col(grid, n),
+    )
 
-toCols : Grid -> List (List Cell)
-toCols = \grid ->
-    List.map
-        (List.range houseRange)
-        (\n -> getCol grid n)
-
-fromCols : List (List Cell) -> Grid
-fromCols = \cols ->
-    List.map
-        (List.range houseRange)
-        (\n -> List.map
-                cols
-                (\col -> List.get col (Num.toU64 n)
-                    |> Result.withDefault defaultCell))
+from_cols : List (List Cell) -> Grid
+from_cols = |cols|
+    List.map(
+        List.range(house_range),
+        |n|
+            List.map(
+                cols,
+                |col|
+                    List.get(col, Num.to_u64(n))
+                    |> Result.with_default(default_cell),
+            ),
+    )
     |> List.join
     |> @Grid
 
-toBoxes : Grid -> List (List Cell)
-toBoxes = \grid ->
-    List.map
-        (List.range houseRange)
-        (\n -> getBox grid n)
+to_boxes : Grid -> List (List Cell)
+to_boxes = |grid|
+    List.map(
+        List.range(house_range),
+        |n| get_box(grid, n),
+    )
 
 # Sudoku Logic
 
 ## Determine whether a Grid has at least 17 clues
-sufficientHints : Grid -> Bool
-sufficientHints = \@Grid cells ->
-    filledCells = List.countIf
-        cells
-        (\cell ->
+sufficient_hints : Grid -> Bool
+sufficient_hints = |@Grid(cells)|
+    filled_cells = List.count_if(
+        cells,
+        |cell|
             when cell is
-                Empty _ -> Bool.false
-                Fixed _ -> Bool.true
+                Empty(_) -> Bool.false
+                Fixed(_) -> Bool.true,
+    )
 
-        )
-
-    filledCells >= 17
+    filled_cells >= 17
 
 ## Determine whether a house (row, column, or box) is legal
 ## i.e. whether it contains no duplicate numbers
-houseOk : List Cell -> Bool
-houseOk = \house ->
+house_ok : List Cell -> Bool
+house_ok = |house|
     house
-    |> List.keepOks
-        (\cell ->
+    |> List.keep_oks(
+        |cell|
             when cell is
-                Fixed num -> Ok num
-                Empty _ -> Err {})
-    |> allUnique
+                Fixed(num) -> Ok(num)
+                Empty(_) -> Err({}),
+    )
+    |> all_unique
 
 ## Determine whether a collection of rows, columns, or boxes is legal
-housesOk : List (List Cell) -> Bool
-housesOk = \houses ->
+houses_ok : List (List Cell) -> Bool
+houses_ok = |houses|
     # TODO: (Perf) Use List.walkUntil to break early if a house is not legal
     houses
-    |> List.map houseOk
-    |> List.all identity
+    |> List.map(house_ok)
+    |> List.all(identity)
 
 ## Determine whether a Grid is legal
-isLegal : Grid -> Bool
-isLegal = \grid ->
-    rowsOk =
-        toRows grid
-        |> housesOk
+is_legal : Grid -> Bool
+is_legal = |grid|
+    rows_ok =
+        to_rows(grid)
+        |> houses_ok
 
-    colsOk =
-        toCols grid
-        |> housesOk
+    cols_ok =
+        to_cols(grid)
+        |> houses_ok
 
-    boxesOk =
-        toBoxes grid
-        |> housesOk
+    boxes_ok =
+        to_boxes(grid)
+        |> houses_ok
 
-    rowsOk && colsOk && boxesOk
+    rows_ok and cols_ok and boxes_ok
 
-numberIsLegal : Grid, Coord, Number -> Bool
-numberIsLegal = \grid, coord, num ->
-    cell = get grid coord
+number_is_legal : Grid, Coord, Number -> Bool
+number_is_legal = |grid, coord, num|
+    cell = get(grid, coord)
     when cell is
-        Fixed _ -> Bool.false
-        Empty _ ->
-            newGrid = set grid coord (Fixed num)
-            row = getRow newGrid (Coord.getRow coord)
-            col = getCol newGrid (Coord.getCol coord)
-            box = getBox newGrid (Coord.getBox coord)
+        Fixed(_) -> Bool.false
+        Empty(_) ->
+            new_grid = set(grid, coord, Fixed(num))
+            row = get_row(new_grid, Coord.get_row(coord))
+            col = get_col(new_grid, Coord.get_col(coord))
+            box = get_box(new_grid, Coord.get_box(coord))
 
-            housesOk [row, col, box]
+            houses_ok([row, col, box])
 
 prune : Grid -> Grid
-prune = \grid ->
-    newGrid =
+prune = |grid|
+    new_grid =
         grid
-        |> mapRows pruneHouse
-        |> mapCols pruneHouse
-        |> mapBoxes pruneHouse
+        |> map_rows(prune_house)
+        |> map_cols(prune_house)
+        |> map_boxes(prune_house)
 
-    if newGrid == grid then
+    if new_grid == grid then
         grid
     else
-        prune newGrid
+        prune(new_grid)
 
-pruneHouse : List Cell -> List Cell
-pruneHouse = \house ->
+prune_house : List Cell -> List Cell
+prune_house = |house|
 
-    fixedNumbers =
+    fixed_numbers =
         house
-        |> List.keepOks
-            (\cell ->
+        |> List.keep_oks(
+            |cell|
                 when cell is
-                    Fixed num -> Ok num
-                    Empty _ -> Err {})
+                    Fixed num -> Ok(num)
+                    Empty _ -> Err({}),
+        )
 
-    pruneCell = \cell ->
+    prune_cell = |cell|
         when cell is
-            Fixed _ -> cell
-            Empty numbers ->
-                if List.len numbers == 1 then
-                    Fixed
+            Fixed(_) -> cell
+            Empty(numbers) ->
+                if List.len(numbers) == 1 then
+                    Fixed(
                         (
-                            List.get numbers 0
-                            |> Result.withDefault Number.one
-                        )
+                            List.get(numbers, 0)
+                            |> Result.with_default(Number.one)
+                        ),
+                    )
                 else
-                    Empty
+                    Empty(
                         (
                             numbers
-                            |> List.dropIf
-                                (\n -> fixedNumbers |> List.contains n)
-                        )
+                            |> List.drop_if(
+                                |n| fixed_numbers |> List.contains(n),
+                            )
+                        ),
+                    )
 
-    newHouse = List.map house (\cell -> pruneCell cell)
-    if newHouse == house then
+    new_house = List.map(house, |cell| prune_cell(cell))
+    if new_house == house then
         house
     else
-        pruneHouse newHouse
+        prune_house(new_house)
 
 expect
-    pruneHouse [
-        Empty [
-            Number.one,
-            Number.two,
-            Number.three,
-            Number.four,
+    prune_house(
+        [
+            Empty(
+                [
+                    Number.one,
+                    Number.two,
+                    Number.three,
+                    Number.four,
+                ],
+            ),
+            Fixed(Number.three),
+            Empty([Number.four]),
         ],
-        Fixed Number.three,
-        Empty [Number.four],
-    ]
+    )
     == [
-        Empty [Number.one, Number.two],
-        Fixed Number.three,
-        Fixed Number.four,
+        Empty([Number.one, Number.two]),
+        Fixed(Number.three),
+        Fixed(Number.four),
     ]
 
 # Display
 
-prettyPrint : Grid -> Str
-prettyPrint = \grid ->
+pretty_print : Grid -> Str
+pretty_print = |grid|
     templates = {
-        lineTop: "┏━━━┯━━━┯━━━┳━━━┯━━━┯━━━┳━━━┯━━━┯━━━┓\n",
-        lineMidThin: "┠───┼───┼───╂───┼───┼───╂───┼───┼───┨\n",
-        lineMidThick: "┣━━━┿━━━┿━━━╋━━━┿━━━┿━━━╋━━━┿━━━┿━━━┫\n",
-        lineBottom: "┗━━━┷━━━┷━━━┻━━━┷━━━┷━━━┻━━━┷━━━┷━━━┛",
+        line_top: "┏━━━┯━━━┯━━━┳━━━┯━━━┯━━━┳━━━┯━━━┯━━━┓\n",
+        line_mid_thin: "┠───┼───┼───╂───┼───┼───╂───┼───┼───┨\n",
+        line_mid_thick: "┣━━━┿━━━┿━━━╋━━━┿━━━┿━━━╋━━━┿━━━┿━━━┫\n",
+        line_bottom: "┗━━━┷━━━┷━━━┻━━━┷━━━┷━━━┻━━━┷━━━┷━━━┛",
         row: "┃ _ │ _ │ _ ┃ _ │ _ │ _ ┃ _ │ _ │ _ ┃\n",
     }
 
-    formatRow : List Cell -> Str
-    formatRow = \row ->
+    format_row : List Cell -> Str
+    format_row = |row|
         row
-        |> List.map
-            (\cell ->
+        |> List.map(
+            |cell|
                 when cell is
-                    Fixed num -> Number.toStr num
-                    Empty _ -> " ")
-        |> List.walk
-            templates.row
-            (\template, cell ->
-                Str.replaceFirst template "_" cell
-            )
+                    Fixed(num) -> Number.to_str(num)
+                    Empty(_) -> " ",
+        )
+        |> List.walk(
+            templates.row,
+            |template, cell|
+                Str.replace_first(template, "_", cell),
+        )
     rows =
         grid
-        |> toRows
-        |> List.map formatRow
+        |> to_rows
+        |> List.map(format_row)
 
-    List.walkWithIndex
-        rows
-        ""
-        (\output, row, index ->
-            toAdd =
+    List.walk_with_index(
+        rows,
+        "",
+        |output, row, index|
+            to_add =
                 if index == 0 then
-                    Str.concat templates.lineTop row
+                    Str.concat(templates.line_top, row)
                 else if index % 3 == 0 then
-                    Str.concat templates.lineMidThick row
+                    Str.concat(templates.line_mid_thick, row)
                 else if index == 8 then
-                    Str.concat templates.lineMidThin row
-                    |> Str.concat templates.lineBottom
+                    Str.concat(templates.line_mid_thin, row)
+                    |> Str.concat(templates.line_bottom)
                 else
-                    Str.concat templates.lineMidThin row
+                    Str.concat(templates.line_mid_thin, row)
 
-            Str.concat output toAdd
-
-        )
+            Str.concat(output, to_add),
+    )
 
 # Helpers
 
-houseRange = { start: At 0, end: At 8 }
+house_range = { start: At(0), end: At(8) }
 
-rowCoords : U8 -> List Coord
-rowCoords = \rowNum ->
-    getCoord = \colNum ->
-        Coord.fromRowCol rowNum colNum
+row_coords : U8 -> List Coord
+row_coords = |row_num|
+    get_coord = |col_num|
+        Coord.from_row_col(row_num, col_num)
 
-    List.map
-        (List.range houseRange)
-        getCoord
+    List.map(
+        List.range(house_range),
+        get_coord,
+    )
 
-colCoords : U8 -> List Coord
-colCoords = \colNum ->
-    getCoord = \rowNum ->
-        Coord.fromRowCol rowNum colNum
+col_coords : U8 -> List Coord
+col_coords = |col_num|
+    get_coord = |row_num|
+        Coord.from_row_col(row_num, col_num)
 
-    List.map
-        (List.range houseRange)
-        getCoord
+    List.map(
+        List.range(house_range),
+        get_coord,
+    )
 
-boxCoords : U8 -> List Coord
-boxCoords = \boxNum ->
-    boxRange = { start: At 0, end: At 2 }
+box_coords : U8 -> List Coord
+box_coords = |box_num|
+    box_range = { start: At(0), end: At(2) }
 
-    boxRow =
-        boxNum // 3
+    box_row =
+        box_num // 3
 
-    boxCol =
-        boxNum % 3
+    box_col =
+        box_num % 3
 
-    yCoords =
-        List.map
-            (List.range boxRange)
-            (\n -> (3 * boxRow) + n)
+    y_coords =
+        List.map(
+            List.range(box_range),
+            |n| (3 * box_row) + n,
+        )
 
-    xCoords =
-        List.map
-            (List.range boxRange)
-            (\n -> (3 * boxCol) + n)
+    x_coords =
+        List.map(
+            List.range(box_range),
+            |n| (3 * box_col) + n,
+        )
 
-    coordsInRow = \yCoord ->
-        List.map
-            xCoords
-            (\xCoord -> Coord.fromXY xCoord yCoord)
+    coords_in_row = |y_coord|
+        List.map(
+            x_coords,
+            |x_coord| Coord.from_xy(x_coord, y_coord),
+        )
 
-    List.map yCoords coordsInRow |> List.join
+    List.map(y_coords, coords_in_row) |> List.join
 
-allUnique : List a -> Bool where a implements Eq
-allUnique = \list ->
-    if List.len list == 0 then
+all_unique : List a -> Bool where a implements Eq
+all_unique = |list|
+    if List.len(list) == 0 then
         Bool.true
     else
-        { before, others } = List.split list 1
-        when List.get before 0 is
-            Ok value ->
-                if List.contains others value then
+        { before, others } = List.split_at(list, 1)
+        when List.get(before, 0) is
+            Ok(value) ->
+                if List.contains(others, value) then
                     Bool.false
                 else
-                    allUnique others
+                    all_unique(others)
 
-            Err _ -> Bool.true
+            Err(_) -> Bool.true
 
-expect allUnique [1, 2, 5, 7] == Bool.true
-expect allUnique ["hi", "hi"] == Bool.false
+expect all_unique([1, 2, 5, 7]) == Bool.true
+expect all_unique(["hi", "hi"]) == Bool.false
 
 identity : a -> a
-identity = \a -> a
+identity = |a| a
 
 # Tests
 
-testPuzzle1 : Grid
-testPuzzle1 =
+test_puzzle1 : Grid
+test_puzzle1 =
     """
     0,9,0,4,0,0,0,0,0
     2,0,1,3,0,0,0,0,0
@@ -458,45 +481,46 @@ testPuzzle1 =
     0,0,0,0,0,9,3,0,0
     0,0,0,0,0,0,0,5,0
     """
-    |> fromStr
+    |> from_str
 
-expect testPuzzle1 |> sufficientHints == Bool.true
-expect testPuzzle1 |> isLegal == Bool.true
-expect testPuzzle1 == testPuzzle1
+expect test_puzzle1 |> sufficient_hints == Bool.true
+expect test_puzzle1 |> is_legal == Bool.true
+expect test_puzzle1 == test_puzzle1
 expect
-    testPuzzle1
-    |> getCol 0
+    test_puzzle1
+    |> get_col(0)
     ==
     [
-        Empty Number.all,
-        Fixed Number.two,
-        Fixed Number.three,
-        Fixed Number.five,
-        Empty Number.all,
-        Fixed Number.four,
-        Empty Number.all,
-        Empty Number.all,
-        Empty Number.all,
-
+        Empty(Number.all),
+        Fixed(Number.two),
+        Fixed(Number.three),
+        Fixed(Number.five),
+        Empty(Number.all),
+        Fixed(Number.four),
+        Empty(Number.all),
+        Empty(Number.all),
+        Empty(Number.all),
     ]
 expect
-    testPuzzle1
-    |> toBoxes
-    |> List.get 0
-    == Ok [
-        Empty Number.all,
-        Fixed Number.nine,
-        Empty Number.all,
-        Fixed Number.two,
-        Empty Number.all,
-        Fixed Number.one,
-        Fixed Number.three,
-        Empty Number.all,
-        Fixed Number.five,
-    ]
+    test_puzzle1
+    |> to_boxes
+    |> List.get(0)
+    == Ok(
+        [
+            Empty(Number.all),
+            Fixed(Number.nine),
+            Empty(Number.all),
+            Fixed(Number.two),
+            Empty(Number.all),
+            Fixed(Number.one),
+            Fixed(Number.three),
+            Empty(Number.all),
+            Fixed(Number.five),
+        ],
+    )
 
-testPuzzle2 : Grid
-testPuzzle2 =
+test_puzzle2 : Grid
+test_puzzle2 =
     """
     ,1,1,,,,,,
     ,,,,,,,,
@@ -508,7 +532,7 @@ testPuzzle2 =
     ,,,,,,,,
     ,,,,,,,,
     """
-    |> fromStr
+    |> from_str
 
-expect testPuzzle2 |> sufficientHints == Bool.false
-expect testPuzzle2 |> isLegal == Bool.false
+expect test_puzzle2 |> sufficient_hints == Bool.false
+expect test_puzzle2 |> is_legal == Bool.false
